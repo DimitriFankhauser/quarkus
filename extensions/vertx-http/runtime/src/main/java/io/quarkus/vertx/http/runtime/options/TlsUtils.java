@@ -9,6 +9,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
+import org.jboss.logging.Logger;
+
 import io.quarkus.vertx.http.runtime.CertificateConfig;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.net.KeyCertOptions;
@@ -22,6 +24,14 @@ import io.vertx.core.net.TrustOptions;
  */
 public class TlsUtils {
 
+    private static final Logger log = Logger.getLogger(TlsUtils.class);
+
+    /**
+     * Sentinel value for {@code key-store-file} to explicitly indicate no keystore.
+     * Use {@code quarkus.http.ssl.certificate.key-store-file=null} in {@code application.properties}.
+     */
+    public static final String NULL_KEYSTORE_SENTINEL = "null";
+
     private TlsUtils() {
         // Avoid direct instantiation
     }
@@ -29,7 +39,7 @@ public class TlsUtils {
     public static KeyCertOptions computeKeyStoreOptions(CertificateConfig certificates, Optional<String> keyStorePassword,
             Optional<String> keyStoreAliasPassword) throws IOException {
 
-        if (certificates.keyFiles().isPresent() || certificates.files().isPresent()) {
+        if (certificates.files().isPresent() || certificates.keyFiles().isPresent()) {
             if (certificates.keyFiles().isEmpty()) {
                 throw new IllegalArgumentException("You must specify the key files when specifying the certificate files");
             }
@@ -42,6 +52,10 @@ public class TlsUtils {
             }
             return createPemKeyCertOptions(certificates.files().get(), certificates.keyFiles().get());
         } else if (certificates.keyStoreFile().isPresent()) {
+            if (NULL_KEYSTORE_SENTINEL.equals(certificates.keyStoreFile().get().toString())) {
+                log.info("Keystore is null");
+                return null;
+            }
             var type = getKeyStoreType(certificates.keyStoreFile().get(), certificates.keyStoreFileType());
             return createKeyStoreOptions(
                     certificates.keyStoreFile().get(),

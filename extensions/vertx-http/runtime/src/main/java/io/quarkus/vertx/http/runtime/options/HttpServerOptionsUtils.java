@@ -236,6 +236,9 @@ public class HttpServerOptionsUtils {
         if (keyStoreOptions != null) {
             serverOptions.setKeyCertOptions(keyStoreOptions);
         }
+        if (keyStoreOptions == null) {
+            Logger.getLogger(HttpServerOptionsUtils.class).info("Keystore is null");
+        }
         if (trustStoreOptions != null) {
             serverOptions.setTrustOptions(trustStoreOptions);
         }
