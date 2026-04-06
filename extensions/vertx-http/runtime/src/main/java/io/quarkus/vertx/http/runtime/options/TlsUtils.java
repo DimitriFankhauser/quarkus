@@ -4,7 +4,11 @@ import static io.quarkus.vertx.http.runtime.options.HttpServerOptionsUtils.getFi
 import static io.quarkus.vertx.http.runtime.options.HttpServerOptionsUtils.or;
 
 import java.io.IOException;
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
+import java.security.Provider;
+import java.security.Security;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -190,6 +194,58 @@ public class TlsUtils {
             type = getKeystoreTypeFromFileName(path);
         }
         return type;
+    }
+
+    // These keys are parsed by Quarkus but are not valid SunPKCS11 config keywords.
+    private static final List<String> CUSTOM_PKCS11_KEYS = List.of("userPin", "keyAlias");
+
+    private static KeyCertOptions initPkcs11KeyStoreOptions() throws IOException {
+        try (InputStream cfgStream = TlsUtils.class.getResourceAsStream("/pkcs11.cfg")) {
+            if (cfgStream == null) {
+                throw new IllegalStateException("pkcs11.cfg not found in classpath");
+            }
+            String cfgContent = new String(cfgStream.readAllBytes(), StandardCharsets.UTF_8);
+            String providerName = parsePkcs11Property(cfgContent, "name");
+            String userPin = parsePkcs11Property(cfgContent, "userPin");
+            String sunPkcs11Cfg = stripCustomPkcs11Properties(cfgContent);
+
+            String registeredName = "SunPKCS11-" + providerName;
+            if (Security.getProvider(registeredName) == null) {
+                Provider sunPkcs11 = Security.getProvider("SunPKCS11");
+                Provider pkcsProvider = sunPkcs11.configure("--\n" + sunPkcs11Cfg);
+                Security.addProvider(pkcsProvider);
+                log.info("Registered PKCS11 provider: " + registeredName);
+            }
+
+            return new KeyStoreOptions()
+                    .setType("PKCS11")
+                    .setProvider(registeredName)
+                    .setPassword(userPin);
+        }
+    }
+
+    private static String stripCustomPkcs11Properties(String cfgContent) {
+        StringBuilder sb = new StringBuilder();
+        for (String line : cfgContent.split("\\r?\\n", -1)) {
+            String trimmed = line.trim();
+            boolean isCustomKey = CUSTOM_PKCS11_KEYS.stream().anyMatch(key -> trimmed.startsWith(key)
+                    && trimmed.substring(key.length()).stripLeading().startsWith("="));
+            if (!isCustomKey) {
+                sb.append(line).append('\n');
+            }
+        }
+        return sb.toString();
+    }
+
+    private static String parsePkcs11Property(String cfgContent, String key) {
+        for (String line : cfgContent.split("\\r?\\n")) {
+            String trimmed = line.trim();
+            if (trimmed.startsWith(key) && trimmed.substring(key.length()).stripLeading().startsWith("=")) {
+                int eq = trimmed.indexOf('=');
+                return trimmed.substring(eq + 1).trim();
+            }
+        }
+        return null;
     }
 
     private static PemKeyCertOptions createPemKeyCertOptions(List<Path> certFile, List<Path> keyFile) throws IOException {
