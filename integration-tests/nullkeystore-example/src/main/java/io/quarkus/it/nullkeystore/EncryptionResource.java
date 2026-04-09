@@ -1,4 +1,4 @@
-package io.quarkus.it.exampleendpoint;
+package io.quarkus.it.nullkeystore;
 
 import jakarta.inject.Inject;
 import jakarta.ws.rs.Consumes;
@@ -14,16 +14,16 @@ import io.quarkus.logging.Log;
 public class EncryptionResource {
 
     @Inject
-    RsaUtil rsaUtil;
+    HsmCryptoService cryptoService;
 
     @POST
-    @Path("/encryptRSA")
+    @Path("/encrypt")
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.TEXT_PLAIN)
-    public Response encrypt(EncryptableMessage encryptableMessage) {
-        Log.info("Encrypt request: " + encryptableMessage.message);
+    public Response encrypt(CryptoMessage message) {
+        Log.info("Encrypt request: " + message.message);
         try {
-            String ciphertext = rsaUtil.encrypt(encryptableMessage.message);
+            String ciphertext = cryptoService.encrypt(message.message);
             Log.info("Ciphertext: " + ciphertext);
             return Response.ok(ciphertext).build();
         } catch (Exception e) {
@@ -33,13 +33,13 @@ public class EncryptionResource {
     }
 
     @POST
-    @Path("/decryptRSA")
+    @Path("/decrypt")
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.TEXT_PLAIN)
-    public Response decrypt(EncryptableMessage ciphertext) {
+    public Response decrypt(CryptoMessage ciphertext) {
         Log.info("Decrypt request, ciphertext: " + ciphertext.message);
         try {
-            String message = rsaUtil.decrypt(ciphertext.message);
+            String message = cryptoService.decrypt(ciphertext.message);
             Log.info("Plaintext: " + message);
             return Response.ok(message).build();
         } catch (Exception e) {

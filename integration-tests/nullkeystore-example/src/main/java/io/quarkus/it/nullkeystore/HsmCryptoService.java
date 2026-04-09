@@ -1,4 +1,4 @@
-package io.quarkus.it.exampleendpoint;
+package io.quarkus.it.nullkeystore;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -28,7 +28,7 @@ import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.jboss.logging.Logger;
 
 /**
- * Utility bean for RSA encryption and decryption using a PKCS#11 HSM.
+ * CDI service for RSA encryption and decryption using a PKCS#11 HSM.
  * <p>
  * All HSM-specific properties are read from {@code application.properties}:
  * <ul>
@@ -40,9 +40,9 @@ import org.jboss.logging.Logger;
  * it is passed to the JCA so that only standard SunPKCS11 keywords remain.
  */
 @ApplicationScoped
-public class RsaUtil {
+public class HsmCryptoService {
 
-    private static final Logger LOG = Logger.getLogger(RsaUtil.class);
+    private static final Logger LOG = Logger.getLogger(HsmCryptoService.class);
 
     // Custom keys that Quarkus reads from pkcs11.cfg but that SunPKCS11 does not understand.
     private static final List<String> CUSTOM_PKCS11_KEYS = List.of("userPin", "keyAlias");

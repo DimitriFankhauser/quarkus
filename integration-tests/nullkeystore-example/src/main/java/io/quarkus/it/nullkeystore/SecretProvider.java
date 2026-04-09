@@ -1,4 +1,4 @@
-package io.quarkus.it.exampleendpoint;
+package io.quarkus.it.nullkeystore;
 
 import java.util.HashMap;
 import java.util.Map;

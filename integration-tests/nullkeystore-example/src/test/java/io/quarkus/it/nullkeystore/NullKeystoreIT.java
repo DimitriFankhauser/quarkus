@@ -1,4 +1,4 @@
-package io.quarkus.it.exampleendpoint;
+package io.quarkus.it.nullkeystore;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -15,7 +15,7 @@ import io.quarkus.test.junit.QuarkusTest;
 import io.restassured.RestAssured;
 
 @QuarkusTest
-public class ExampleEndpointTestCase {
+public class NullKeystoreIT {
 
     private static final List<String> CUSTOM_PKCS11_KEYS = List.of("userPin", "keyAlias");
 
@@ -34,7 +34,7 @@ public class ExampleEndpointTestCase {
     public void testEndpointReachableOverHttp() {
         RestAssured.given()
                 .when()
-                .get("/testdimitri/test")
+                .get("/null-keystore")
                 .then()
                 .statusCode(200);
     }
