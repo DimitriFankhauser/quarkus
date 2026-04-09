@@ -20,11 +20,16 @@ import io.vertx.core.net.TrustOptions;
 /**
  * Utility class for TLS configuration.
  */
+
 public class TlsUtils {
 
     private TlsUtils() {
         // Avoid direct instantiation
     }
+
+     // get rid of all AI generated code 
+     // keystoreoptions should NOT load the keystore if Path== null 
+     // in Vertx where the keystoreoptions are used,if it's keystorecontent is null, load the keystore from disk 
 
     public static KeyCertOptions computeKeyStoreOptions(CertificateConfig certificates, Optional<String> keyStorePassword,
             Optional<String> keyStoreAliasPassword) throws IOException {
