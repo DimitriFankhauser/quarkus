@@ -27,26 +27,34 @@ public class TlsUtils {
         // Avoid direct instantiation
     }
 
-     // get rid of all AI generated code 
-     // keystoreoptions should NOT load the keystore if Path== null 
-     // in Vertx where the keystoreoptions are used,if it's keystorecontent is null, load the keystore from disk 
+    // get rid of all AI generated code
+    // keystoreoptions should NOT load the keystore if Path== null
+    // in Vertx where the keystoreoptions are used,if it's keystorecontent is null, load the keystore from disk
 
     public static KeyCertOptions computeKeyStoreOptions(CertificateConfig certificates, Optional<String> keyStorePassword,
             Optional<String> keyStoreAliasPassword) throws IOException {
 
+        // checks two lists for Initialization:
+        // keyfiles= paths to private key files (PEM)
+        // files= paths to certificates
         if (certificates.keyFiles().isPresent() || certificates.files().isPresent()) {
+            // checks if private Key-List is empty => I think this is where we need to make the change.
             if (certificates.keyFiles().isEmpty()) {
                 throw new IllegalArgumentException("You must specify the key files when specifying the certificate files");
             }
             if (certificates.files().isEmpty()) {
+                // checks if certificate-list is empty
                 throw new IllegalArgumentException("You must specify the certificate files when specifying the key files");
             }
             if (certificates.files().get().size() != certificates.keyFiles().get().size()) {
+                // checks if the lengths of the lists match
                 throw new IllegalArgumentException(
                         "The number of certificate files and key files must be the same, and be given in the same order");
             }
             return createPemKeyCertOptions(certificates.files().get(), certificates.keyFiles().get());
         } else if (certificates.keyStoreFile().isPresent()) {
+            //Keystorefile here: An optional keystore that holds the certificate information instead of specifying separate files.
+            // this "ELSE" is used, if certificate/key are not in the PEM format
             var type = getKeyStoreType(certificates.keyStoreFile().get(), certificates.keyStoreFileType());
             return createKeyStoreOptions(
                     certificates.keyStoreFile().get(),

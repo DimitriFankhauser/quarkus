@@ -1,8 +1,14 @@
 # Notes Dimitri 
 
+## Commands
+
+Build Quarkus 
+
+    mvn clean install -DskipTests -DskipITs -DskipDocs
+    
 ## Callstack
 
-`VertxHttpProcessor.openSocket -> VertxHttpRecorder.startServer/startServerAfterFailedStart -> VertxHttpRecorder.doServerStart -> VertxHttpRecorder.initializeMainHttpServer -> HttpServerOptionUtils.createSslOptions -> HTTPServerOptionUtils.applySslConfigToHttpServerOptions -> TLSUtils.computeKeyStoreOptions`
+`VertxHttpProcessor.openSocket -> VertxHttpRecorder.startServer/startServerAfterFailedStart -> VertxHttpRecorder.doServerStart -> VertxHttpRecorder.initializeMainHttpServer -> HttpServerOptionUtils.createSslOptions -> HTTPServerOptionUtils.applySslConfigToHttpServerOptions ->  TLSUtils.computeKeyStoreOptions`
 
 `VertxHttpProcessor.openSocket -> VertxHttpRecorder.startServer/startServerAfterFailedStart -> VertxHttpRecorder.doServerStart -> VertxHttpRecorder.initializeManagementInterface -> HttpServerOptionUtils.createSslOptionsForManagementInterface -> HTTPServerOptionUtils.applySslConfigToHttpServerOptions -> TLSUtils.computeKeyStoreOptions`
 
@@ -30,7 +36,7 @@ This seems to be the attribute for mTLS
 `
 
 ---
-Callstack for TLSConfig 
+## Callstack for TLSConfig 
 
 ```VertxHttpProcessor.finalizeRouter``` has ``` TlsRegistryBuildItem tlsRegistryBuildItem``` in it's constructor. 
 ``` TlsRegistryBuildItem``` has ```Supplier<TlsConfigurationRegistry> reference```in it's constructor. 
@@ -97,7 +103,7 @@ The interface `ServerSslConfig` of course has the function `CertificateConfig ce
 
 
 Looking into the inline class `WebDeploymentVerticle`(Filename=VertxHttpRecorder) one can quickly see this: 
-`WebDeploymentVerticle` extends `AbstractVerticle`and has  `HttpServerOptions httpsOptions` as a parameter. The "Goal" of this class is to run `vertx.createHttpServer(HttpServerOptions options)`. `HttpServerOptions` extends `NetServerOptions` and has the following Methods, that seem relevant 
+`WebDeploymentVerticle` extends `AbstractVerticle`and has  `HttpServerOptions httpsOptions` as a parameter. The "Goal" of this class is to run `vertx.createHttpServer(HttpServerOptions options)`. `HttpServerOptions` extends `NetServerOptions` (VertX) and has the following Methods, that seem relevant 
 
 
 `  
@@ -127,3 +133,9 @@ Looking into the inline class `WebDeploymentVerticle`(Filename=VertxHttpRecorder
         return (HttpServerOptions) super.setPemKeyCertOptions(options);
     }
   `
+---
+
+# What TlsUtils does
+
+
+

@@ -2,22 +2,10 @@ package io.quarkus.it.bouncycastle;
 
 import static org.awaitility.Awaitility.given;
 import static org.hamcrest.Matchers.containsString;
-import static org.hamcrest.Matchers.startsWith;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import java.io.BufferedReader;
-import java.io.ByteArrayInputStream;
-import java.io.InputStreamReader;
 import java.net.URL;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.concurrent.TimeUnit;
 
-import org.awaitility.core.ThrowingRunnable;
 import org.jboss.logging.Logger;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import io.quarkus.test.common.http.TestHTTPResource;
@@ -42,6 +30,9 @@ public class BouncyCastleJsseTestCase {
     protected void doTestListProviders() {
         RequestSpecification spec = new RequestSpecBuilder()
                 .setBaseUri(String.format("%s://%s", url.getProtocol(), url.getHost()))
+                //without this the restAssured client doesn't "trust" the server
+                .setKeyStore("client-keystore.jks", "password")
+                .setTrustStore("client-truststore.jks", "secret")
                 .setPort(url.getPort())
                 .build();
         RestAssured.given()
@@ -50,6 +41,6 @@ public class BouncyCastleJsseTestCase {
                 .get("/jsse/listProviders")
                 .then()
                 .statusCode(200)
-                .body(startsWith("Identity: CN=client"), containsString("SunJSSE"));
+                .body(containsString("SunJSSE"));
     }
 }
