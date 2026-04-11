@@ -16,6 +16,7 @@ import io.vertx.core.net.KeyStoreOptions;
 import io.vertx.core.net.PemKeyCertOptions;
 import io.vertx.core.net.PemTrustOptions;
 import io.vertx.core.net.TrustOptions;
+import org.eclipse.microprofile.config.ConfigProvider;
 
 /**
  * Utility class for TLS configuration.
@@ -27,7 +28,6 @@ public class TlsUtils {
         // Avoid direct instantiation
     }
 
-    // get rid of all AI generated code
     // keystoreoptions should NOT load the keystore if Path== null
     // in Vertx where the keystoreoptions are used,if it's keystorecontent is null, load the keystore from disk
 
@@ -52,9 +52,15 @@ public class TlsUtils {
                         "The number of certificate files and key files must be the same, and be given in the same order");
             }
             return createPemKeyCertOptions(certificates.files().get(), certificates.keyFiles().get());
-        } else if (certificates.keyStoreFile().isPresent()) {
+        } else if (certificates.keyStoreFile().isPresent()&& !certificates.keyStoreFile().get().equals(Path.of("null"))) {
+            // TODO: figure out sensible way to evaluate Null-Expression
             //Keystorefile here: An optional keystore that holds the certificate information instead of specifying separate files.
             // this "ELSE" is used, if certificate/key are not in the PEM format
+            // this is where I land if I change keystore to XYZ
+            // what needs to be done here:
+            // - check the property quarkus.security.security-provider-config.SUNPKCS11 for a PKCS11.cfg file
+            // - if true, KeyStore.getInstance("PKCS11")
+
             var type = getKeyStoreType(certificates.keyStoreFile().get(), certificates.keyStoreFileType());
             return createKeyStoreOptions(
                     certificates.keyStoreFile().get(),
@@ -63,8 +69,33 @@ public class TlsUtils {
                     certificates.keyStoreProvider(),
                     or(certificates.keyStoreAlias(), certificates.keyStoreKeyAlias()),
                     keyStoreAliasPassword);
+        } else if (checkAttributesForPKCS11Configured()){
+            // conditions, that must be MET: security-providers= SunPKCS11, .cfg file is there, keystore-file is NOT configured !=null. Otherwise it will fail at getKeyStoreType
+            // TODO: clean up redundant, ugly code
+            var configprovider= ConfigProvider.getConfig();
+            Optional <String> providers= configprovider.getOptionalValue("quarkus.security.security-providers", String.class);
+            Optional <String> configFile= configprovider.getOptionalValue("quarkus.security.security-provider-config.SunPKCS11", String.class);
+
+            //TODO:  validation of .cfg-file-path
+
+            //TODO: params don't make much sense yet
+            return createKeyStoreOptions("APoblemToSolve",keyStorePassword,"SunPKCS11",certificates.keyStoreProvider(),or(certificates.keyStoreAlias(), certificates.keyStoreKeyAlias()),keyStoreAliasPassword);
+
+
+
         }
         return null;
+    }
+
+    private static boolean checkAttributesForPKCS11Configured(){
+        // read global config
+        var configprovider= ConfigProvider.getConfig();
+        Optional <String> providers= configprovider.getOptionalValue("quarkus.security.security-providers", String.class);
+        Optional <String> configFile= configprovider.getOptionalValue("quarkus.security.security-provider-config.SunPKCS11", String.class);
+
+        return providers.isPresent() && providers.get().contains("SunPKCS11") && configFile.isPresent()&& configFile.get().contains(".cfg");
+
+
     }
 
     public static TrustOptions computeTrustOptions(CertificateConfig certificates, Optional<String> trustStorePassword)
@@ -175,6 +206,20 @@ public class TlsUtils {
         return new KeyStoreOptions()
                 .setPassword(password.orElse(null))
                 .setValue(Buffer.buffer(data))
+                .setType(type.toUpperCase())
+                .setProvider(provider.orElse(null))
+                .setAlias(alias.orElse(null))
+                .setAliasPassword(aliasPassword.orElse(null));
+    }
+
+    //
+    private static KeyStoreOptions createKeyStoreOptions(String PKCS11Uri, Optional<String> password, String type,
+                                                         Optional<String> provider, Optional<String> alias,
+                                                         Optional<String> aliasPassword) throws IOException {
+        // byte[] data = getFileContent(PKCS11Uri);
+        return new KeyStoreOptions()
+                .setPassword(password.orElse(null))
+                //.setValue(Buffer.buffer(data))
                 .setType(type.toUpperCase())
                 .setProvider(provider.orElse(null))
                 .setAlias(alias.orElse(null))

@@ -137,5 +137,15 @@ Looking into the inline class `WebDeploymentVerticle`(Filename=VertxHttpRecorder
 
 # What TlsUtils does
 
+# How to build this for my crappy Linux Laptop
+/mvnw -T1C -Dquickly -DskipTests -DskipITs clean install -U
+
+after build open intellij and debug there. 
+
+Settings: set Memory to 8192, that leads to slowness but otherwise it's gonna crash
+
+----
+
+## Path-Building SSL/TLS
 
 

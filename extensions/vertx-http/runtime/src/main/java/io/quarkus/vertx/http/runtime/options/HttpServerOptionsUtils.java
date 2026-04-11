@@ -170,6 +170,10 @@ public class HttpServerOptionsUtils {
         if (kso != null) {
             serverOptions.setKeyCertOptions(kso);
         }
+        else {
+            Logger.getLogger(HttpServerOptionsUtils.class).warn(
+                    "keyStoreOptions is NULL");
+        }
 
         var to = computeTrustOptions(sslConfig.certificate(), trustStorePassword);
         if (to != null) {
@@ -235,6 +239,9 @@ public class HttpServerOptionsUtils {
         TrustOptions trustStoreOptions = bucket.getTrustStoreOptions();
         if (keyStoreOptions != null) {
             serverOptions.setKeyCertOptions(keyStoreOptions);
+        } else {
+            Logger.getLogger(HttpServerOptionsUtils.class).warn(
+                    "keyStoreOptions is NULL");
         }
         if (trustStoreOptions != null) {
             serverOptions.setTrustOptions(trustStoreOptions);
