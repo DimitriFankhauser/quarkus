@@ -157,6 +157,7 @@ public class HttpServerOptionsUtils {
                 throw new ConfigurationException(
                         "You cannot specify both `keyStoreKeyPassword` and `keyStoreAliasPassword` - Use `keyStoreAliasPassword` instead");
             }
+            // can inject properties until here
             keyStoreAliasPassword = getCredential(
                     or(sslConfig.certificate().keyStoreAliasPassword(), sslConfig.certificate().keyStoreKeyPassword()),
                     credentials,
@@ -169,10 +170,6 @@ public class HttpServerOptionsUtils {
         var kso = computeKeyStoreOptions(sslConfig.certificate(), keyStorePassword, keyStoreAliasPassword);
         if (kso != null) {
             serverOptions.setKeyCertOptions(kso);
-        }
-        else {
-            Logger.getLogger(HttpServerOptionsUtils.class).warn(
-                    "keyStoreOptions is NULL");
         }
 
         var to = computeTrustOptions(sslConfig.certificate(), trustStorePassword);
