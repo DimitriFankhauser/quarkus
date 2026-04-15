@@ -37,10 +37,12 @@ public class BouncyCastleJsseTestCase {
                 .build();
         RestAssured.given()
                 .spec(spec)
+                .relaxedHTTPSValidation() //self-signed certificate
                 .when()
                 .get("/jsse/listProviders")
                 .then()
                 .statusCode(200)
                 .body(containsString("SunJSSE"));
+
     }
 }

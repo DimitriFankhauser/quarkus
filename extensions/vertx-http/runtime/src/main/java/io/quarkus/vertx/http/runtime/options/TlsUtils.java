@@ -57,6 +57,7 @@ public class TlsUtils {
                     keyStoreAliasPassword);
         } else if (certificates.keyStoreProvider().isPresent()
                 && certificates.keyStoreAlias().isPresent()) {
+            //TODO: hardcoded. this still needs to be pulled from the properties
             return createPKCS11KeyStoreOptions("pkcs11.cfg", "123456789", "rsaGenesis");
         }
         return null;
