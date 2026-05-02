@@ -5,11 +5,12 @@ import static io.quarkus.vertx.http.runtime.options.HttpServerOptionsUtils.or;
 
 import java.io.IOException;
 import java.nio.file.Path;
+import java.security.KeyStore;
+import java.security.Provider;
+import java.security.Security;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-
-import org.eclipse.microprofile.config.ConfigProvider;
 
 import io.quarkus.vertx.http.runtime.CertificateConfig;
 import io.vertx.core.buffer.Buffer;
@@ -30,6 +31,18 @@ public class TlsUtils {
 
     public static KeyCertOptions computeKeyStoreOptions(CertificateConfig certificates, Optional<String> keyStorePassword,
             Optional<String> keyStoreAliasPassword) throws IOException {
+        try {
+            Provider sunPKCS11 = Security.getProvider("SunPKCS11");
+            Provider pkcsimplementation = sunPKCS11.configure(
+                    "/home/dimitri/BAA_Folder/q2/quarkus/integration-tests/bouncycastle-jsse/src/main/resources/pkcs11.cfg");
+            Security.addProvider(pkcsimplementation);
+            final Provider[] providerList = Security.getProviders();
+            KeyStore hsmKeyStore = KeyStore.getInstance("PKCS11");
+            // load keystore and log in
+            hsmKeyStore.load(null, "123456789".toCharArray());
+        } catch (java.lang.Exception e) {
+            System.out.println("do nothing");
+        }
 
         if (certificates.keyFiles().isPresent() || certificates.files().isPresent()) {
             // checks if private Key-List is empty => I think this is where we need to make the change.
@@ -46,7 +59,7 @@ public class TlsUtils {
                         "The number of certificate files and key files must be the same, and be given in the same order");
             }
             return createPemKeyCertOptions(certificates.files().get(), certificates.keyFiles().get());
-        } else if (certificates.keyStoreFile().isPresent()&& !certificates.keyStoreFile().get().equals(Path.of("null"))) {
+        } else if (certificates.keyStoreFile().isPresent()) {
             var type = getKeyStoreType(certificates.keyStoreFile().get(), certificates.keyStoreFileType());
             return createKeyStoreOptions(
                     certificates.keyStoreFile().get(),
@@ -55,24 +68,8 @@ public class TlsUtils {
                     certificates.keyStoreProvider(),
                     or(certificates.keyStoreAlias(), certificates.keyStoreKeyAlias()),
                     keyStoreAliasPassword);
-        } else if (certificates.keyStoreProvider().isPresent()
-                && certificates.keyStoreAlias().isPresent()) {
-            //TODO: hardcoded. this still needs to be pulled from the properties
-            return createPKCS11KeyStoreOptions("pkcs11.cfg", "123456789", "rsaGenesis");
         }
         return null;
-    }
-
-    private static boolean checkAttributesForPKCS11Configured() {
-        // read global config
-        var configprovider = ConfigProvider.getConfig();
-        Optional<String> providers = configprovider.getOptionalValue("quarkus.security.security-providers", String.class);
-        Optional<String> configFile = configprovider.getOptionalValue("quarkus.security.security-provider-config.SunPKCS11",
-                String.class);
-
-        return providers.isPresent() && providers.get().contains("SunPKCS11") && configFile.isPresent()
-                && configFile.get().contains(".cfg");
-
     }
 
     public static TrustOptions computeTrustOptions(CertificateConfig certificates, Optional<String> trustStorePassword)
@@ -152,6 +149,8 @@ public class TlsUtils {
             return "jks";
         } else if (name.endsWith(".key") || name.endsWith(".crt") || name.endsWith(".pem")) {
             return "pem";
+        } else if (name.isEmpty() || name == null || name.equals("null")) {
+            return "pkcs11";
         } else {
             throw new IllegalArgumentException("Could not determine the keystore type from the file name: " + path
                     + ". Configure the `quarkus.http.ssl.certificate.key-store-file-type` property.");
@@ -168,6 +167,8 @@ public class TlsUtils {
             return "jks";
         } else if (name.endsWith(".ca") || name.endsWith(".crt") || name.endsWith(".pem")) {
             return "pem";
+        } else if (name.isEmpty() || name == null || name.equals("null")) {
+            return "pkcs11";
         } else {
             throw new IllegalArgumentException("Could not determine the truststore type from the file name: " + path
                     + ". Configure the `quarkus.http.ssl.certificate.trust-store-file-type` property.");
@@ -179,10 +180,12 @@ public class TlsUtils {
     private static KeyStoreOptions createKeyStoreOptions(Path path, Optional<String> password, String type,
             Optional<String> provider, Optional<String> alias,
             Optional<String> aliasPassword) throws IOException {
-        byte[] data = getFileContent(path);
+        boolean isTrue = path.getFileName().toString().toLowerCase().equals("null") ? true : false;
+        byte[] data = path.getFileName().toString().toLowerCase().equals("null") ? null : getFileContent(path);
         return new KeyStoreOptions()
                 .setPassword(password.orElse(null))
-                .setValue(Buffer.buffer(data))
+                .setValue(
+                        path.getFileName().toString().toLowerCase().equals("null") ? null : Buffer.buffer(getFileContent(path)))
                 .setType(type.toUpperCase())
                 .setProvider(provider.orElse(null))
                 .setAlias(alias.orElse(null))
@@ -227,7 +230,4 @@ public class TlsUtils {
                 .setKeyValues(keys);
     }
 
-    private static PKCS11KeyCertOptions createPKCS11KeyStoreOptions(String configPath, String userPin, String keyAlias) {
-        return new PKCS11KeyCertOptions(configPath, userPin, keyAlias);
-    }
 }
