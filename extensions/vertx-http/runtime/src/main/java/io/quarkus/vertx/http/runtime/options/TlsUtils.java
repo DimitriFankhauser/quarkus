@@ -31,18 +31,20 @@ public class TlsUtils {
 
     public static KeyCertOptions computeKeyStoreOptions(CertificateConfig certificates, Optional<String> keyStorePassword,
             Optional<String> keyStoreAliasPassword) throws IOException {
-        try {
-            Provider sunPKCS11 = Security.getProvider("SunPKCS11");
-            Provider pkcsimplementation = sunPKCS11.configure(
-                    "/home/dimitri/BAA_Folder/q2/quarkus/integration-tests/bouncycastle-jsse/src/main/resources/pkcs11.cfg");
-            Security.addProvider(pkcsimplementation);
-            final Provider[] providerList = Security.getProviders();
-            KeyStore hsmKeyStore = KeyStore.getInstance("PKCS11");
-            // load keystore and log in
-            hsmKeyStore.load(null, "123456789".toCharArray());
-        } catch (java.lang.Exception e) {
-            System.out.println("do nothing");
-        }
+        /*
+         * try {
+         * Provider sunPKCS11 = Security.getProvider("SunPKCS11");
+         * Provider pkcsimplementation = sunPKCS11.configure(
+         * "/home/dimitri/BAA_Folder/q2/quarkus/integration-tests/bouncycastle-jsse/src/main/resources/pkcs11.cfg");
+         * Security.addProvider(pkcsimplementation);
+         * final Provider[] providerList = Security.getProviders();
+         * KeyStore hsmKeyStore = KeyStore.getInstance("PKCS11");
+         * // load keystore and log in
+         * hsmKeyStore.load(null, "123456789".toCharArray());
+         * } catch (java.lang.Exception e) {
+         * System.out.println("do nothing");
+         * }
+         */
 
         if (certificates.keyFiles().isPresent() || certificates.files().isPresent()) {
             // checks if private Key-List is empty => I think this is where we need to make the change.
