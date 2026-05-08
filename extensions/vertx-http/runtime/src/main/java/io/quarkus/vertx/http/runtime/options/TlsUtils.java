@@ -5,6 +5,9 @@ import static io.quarkus.vertx.http.runtime.options.HttpServerOptionsUtils.or;
 
 import java.io.IOException;
 import java.nio.file.Path;
+import java.security.KeyStore;
+import java.security.Provider;
+import java.security.Security;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -131,6 +134,8 @@ public class TlsUtils {
             return "jks";
         } else if (name.endsWith(".key") || name.endsWith(".crt") || name.endsWith(".pem")) {
             return "pem";
+        } else if (name.isEmpty() || name == null || name.equals("null")) {
+            return "pkcs11";
         } else {
             throw new IllegalArgumentException("Could not determine the keystore type from the file name: " + path
                     + ". Configure the `quarkus.http.ssl.certificate.key-store-file-type` property.");
@@ -147,6 +152,8 @@ public class TlsUtils {
             return "jks";
         } else if (name.endsWith(".ca") || name.endsWith(".crt") || name.endsWith(".pem")) {
             return "pem";
+        } else if (name.isEmpty() || name == null || name.equals("null")) {
+            return "pkcs11";
         } else {
             throw new IllegalArgumentException("Could not determine the truststore type from the file name: " + path
                     + ". Configure the `quarkus.http.ssl.certificate.trust-store-file-type` property.");
@@ -158,10 +165,10 @@ public class TlsUtils {
     private static KeyStoreOptions createKeyStoreOptions(Path path, Optional<String> password, String type,
             Optional<String> provider, Optional<String> alias,
             Optional<String> aliasPassword) throws IOException {
-        byte[] data = getFileContent(path);
+        byte[] data = path.getFileName().toString().toLowerCase().equals("null") ? null : getFileContent(path);
         return new KeyStoreOptions()
                 .setPassword(password.orElse(null))
-                .setValue(Buffer.buffer(data))
+                .setValue(path.getFileName().toString().toLowerCase().equals("null") ? null : Buffer.buffer(getFileContent(path)))
                 .setType(type.toUpperCase())
                 .setProvider(provider.orElse(null))
                 .setAlias(alias.orElse(null))
@@ -196,4 +203,5 @@ public class TlsUtils {
                 .setCertValues(certificates)
                 .setKeyValues(keys);
     }
+
 }

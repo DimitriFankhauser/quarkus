@@ -242,6 +242,11 @@
         <dependencies>
             <!-- Quarkus platform descriptor -->
             <dependency>
+                <groupId>io.vertx</groupId>
+                <artifactId>vertx-core</artifactId>
+                <version>4.5.27-SNAPSHOT</version>
+            </dependency>
+            <dependency>
                 <groupId>io.quarkus</groupId>
                 <artifactId>quarkus-bom-quarkus-platform-descriptor</artifactId>
                 <classifier>${project.version}</classifier>
