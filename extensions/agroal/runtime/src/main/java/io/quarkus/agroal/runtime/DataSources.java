@@ -1,6 +1,5 @@
 package io.quarkus.agroal.runtime;
 
-import java.sql.Connection;
 import java.sql.Driver;
 import java.time.Duration;
 import java.util.Collection;
@@ -8,7 +7,6 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.ServiceLoader;
 import java.util.Set;
-import java.util.concurrent.Executor;
 import java.util.stream.Collectors;
 
 import jakarta.enterprise.inject.Any;
@@ -319,6 +317,12 @@ public class DataSources {
                     .credential(new AgroalVaultCredentialsProviderPassword(name, credentialsProvider));
         }
 
+        // Set the network timeout configuration if available
+        if (dataSourceJdbcRuntimeConfig.networkTimeout().isPresent()) {
+            Duration networkTimeout = dataSourceJdbcRuntimeConfig.networkTimeout().get();
+            connectionFactoryConfiguration.networkTimeout(networkTimeout);
+        }
+
         // Additional JDBC properties from build time config
         for (Map.Entry<String, String> entry : buildTimeJdbcProperties.entrySet()) {
             connectionFactoryConfiguration.jdbcProperty(entry.getKey(), entry.getValue());
@@ -358,7 +362,7 @@ public class DataSources {
             Duration timeout = dataSourceJdbcRuntimeConfig.validationQueryTimeout().orElse(Duration.ZERO);
             // Network timeout must exceed query timeout so the JDBC driver can handle the query timeout gracefully
             // before the network layer forcibly closes the connection
-            poolConfiguration.connectionValidator(sqlValidator(validationQuery, timeout,
+            poolConfiguration.connectionValidator(ConnectionValidator.sqlValidator(validationQuery, timeout,
                     timeout.isZero() ? null : timeout.plusSeconds(5L)));
         }
         poolConfiguration.validateOnBorrow(dataSourceJdbcRuntimeConfig.validateOnBorrow());
@@ -372,51 +376,10 @@ public class DataSources {
         if (dataSourceJdbcRuntimeConfig.transactionRequirement().isPresent()) {
             poolConfiguration.transactionRequirement(dataSourceJdbcRuntimeConfig.transactionRequirement().get());
         }
-        poolConfiguration.multipleAcquisition(dataSourceJdbcRuntimeConfig.multipleAcquisition().toAgroalAction());
+        poolConfiguration.multipleAcquisition(dataSourceJdbcRuntimeConfig.multipleAcquisition());
         poolConfiguration.enhancedLeakReport(dataSourceJdbcRuntimeConfig.extendedLeakReport());
         poolConfiguration.flushOnClose(dataSourceJdbcRuntimeConfig.flushOnClose());
         poolConfiguration.recoveryEnable(dataSourceJdbcRuntimeConfig.enableRecovery());
-    }
-
-    /**
-     * A validator that uses the provided SQL statement for validation with a query timeout and a configurable network timeout.
-     * If the timeout period expires before the operation completes, the connection is invalidated.
-     * A timeout of zero means no timeout.
-     * The network timeout should be greater than the query timeout to allow the query timeout to cancel the statement
-     * cleanly before the network timeout forces the socket closed.
-     */
-    static ConnectionValidator sqlValidator(String sql, Duration queryTimeout, Duration networkTimeout) {
-        return new ConnectionValidator() {
-            @Override
-            public boolean isValid(Connection connection) {
-                Executor executor = Runnable::run;
-                int originalNetworkTimeout = 0;
-                if (networkTimeout != null) {
-                    try {
-                        originalNetworkTimeout = connection.getNetworkTimeout();
-                        connection.setNetworkTimeout(executor, (int) networkTimeout.toMillis());
-                    } catch (Exception e) {
-                        log.debug("Driver does not support network timeout", e);
-                    }
-                }
-                try (var statement = connection.createStatement()) {
-                    statement.setQueryTimeout((int) queryTimeout.toSeconds());
-                    statement.execute(sql);
-                    return true;
-                } catch (Exception e) {
-                    log.debugv(e, "Failed to execute validation query: {0}", sql);
-                    return false;
-                } finally {
-                    if (networkTimeout != null) {
-                        try {
-                            connection.setNetworkTimeout(executor, originalNetworkTimeout);
-                        } catch (Exception ignore) {
-                            // already logged above
-                        }
-                    }
-                }
-            }
-        };
     }
 
     /**
