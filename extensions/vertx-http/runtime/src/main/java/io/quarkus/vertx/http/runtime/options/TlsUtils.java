@@ -9,6 +9,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
+import io.quarkus.runtime.configuration.ConfigurationException;
 import io.quarkus.vertx.http.runtime.CertificateConfig;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.net.KeyCertOptions;
@@ -158,10 +159,19 @@ public class TlsUtils {
     private static KeyStoreOptions createKeyStoreOptions(Path path, Optional<String> password, String type,
             Optional<String> provider, Optional<String> alias,
             Optional<String> aliasPassword) throws IOException {
-        byte[] data = path.getFileName().toString().toLowerCase().equals("null") ? null : getFileContent(path);
+        Buffer value;
+        if (path.toString().equals("none")) {
+            if (!type.equalsIgnoreCase("PKCS11")) {
+                throw new ConfigurationException(
+                        "Keystore file property can only be set to 'none' when a keystore file type is PKCS11");
+            }
+            value = null;
+        } else {
+            value = Buffer.buffer(getFileContent(path));
+        }
         return new KeyStoreOptions()
                 .setPassword(password.orElse(null))
-                .setValue(data == null ? null : Buffer.buffer(data))
+                .setValue(value)
                 .setType(type.toUpperCase())
                 .setProvider(provider.orElse(null))
                 .setAlias(alias.orElse(null))
@@ -196,5 +206,4 @@ public class TlsUtils {
                 .setCertValues(certificates)
                 .setKeyValues(keys);
     }
-
 }
