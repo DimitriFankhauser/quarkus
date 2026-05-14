@@ -240,6 +240,11 @@
 
     <dependencyManagement>
         <dependencies>
+        <dependency>
+                <groupId>io.vertx</groupId>
+                <artifactId>vertx-core</artifactId>
+                <version>4.5.28-SNAPSHOT</version>
+            </dependency>
             <!-- Quarkus platform descriptor -->
             <dependency>
                 <groupId>io.quarkus</groupId>
